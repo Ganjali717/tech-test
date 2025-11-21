@@ -17,4 +17,9 @@
     <ProjectReference Include="..\Order.Service\Order.Service.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Middleware\" />
+    <Folder Include="Validation\" />
+  </ItemGroup>
+
 </Project>

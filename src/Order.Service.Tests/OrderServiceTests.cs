@@ -2,8 +2,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using NUnit.Framework;
-using Order.Data;
+using Order.Data.Context;
 using Order.Data.Entities;
+using Order.Data.Repositories;
+using Order.Service.Interfaces;
 using System;
 using System.Data.Common;
 using System.Linq;

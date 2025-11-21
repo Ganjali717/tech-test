@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Order.Data;
-using Order.Service;
+using Order.Data.Context;
+using Order.Data.Repositories;
+using Order.Service.Interfaces;
 
 namespace OrderService.WebAPI
 {
@@ -29,7 +30,7 @@ namespace OrderService.WebAPI
                 .UseMySQL(serviceOptions);
             });
 
-            services.AddScoped<IOrderService, Order.Service.OrderService>();
+            services.AddScoped<IOrderService, Order.Service.Implementation.OrderService>();
             services.AddScoped<IOrderRepository, OrderRepository>();
 
             services.AddControllers();

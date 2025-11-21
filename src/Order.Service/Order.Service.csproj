@@ -9,4 +9,9 @@
     <ProjectReference Include="..\Order.Model\Order.Model.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Exceptions\" />
+    <Folder Include="Status\" />
+  </ItemGroup>
+
 </Project>

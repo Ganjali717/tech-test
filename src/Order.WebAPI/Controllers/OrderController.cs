@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Order.Model;
-using Order.Service;
+using Order.Service.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
