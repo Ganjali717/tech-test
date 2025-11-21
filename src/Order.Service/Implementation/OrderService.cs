@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Order.Model;
+using Order.Model.Requests;
 
 namespace Order.Service
 {
@@ -30,22 +32,22 @@ namespace Order.Service
 
         public async Task<OrderDetail> UpdateOrderStatusAsync(Guid orderId, string newStatus)
         {
-            if (string.IsNullOrWhiteSpace(newStatus))
-                throw new ArgumentException("Status is required.", nameof(newStatus));
-
-            var current = await _orderRepository.GetOrderByIdAsync(orderId);
-            if (current == null)
-                throw new OrderNotFoundException(orderId);
+            var current = await _orderRepository.GetOrderByIdAsync(orderId)
+                          ?? throw new OrderNotFoundException(orderId);
 
             var currentStatus = current.StatusName;
-            var targetStatus = newStatus.Trim();
-
+            var targetStatus = Helper.NormalizeStatus(newStatus);
             OrderStatusTransitions.Validate(currentStatus, targetStatus);
 
             await _orderRepository.UpdateOrderStatusAsync(orderId, targetStatus);
-
             return await _orderRepository.GetOrderByIdAsync(orderId);
         }
+
+        public async Task<OrderDetail> CreateOrderAsync(CreateOrderRequest request)
+            => await _orderRepository.CreateOrderAsync(request);
+
+        public Task<IEnumerable<MonthlyProfit>> GetMonthlyProfitAsync()
+            => _orderRepository.GetMonthlyProfitAsync();
 
     }
 }

@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Order.Data.Context;
 using Order.Data.Repositories;
+using Order.Model.Requests;
 using Order.Service.Interfaces;
+using OrderService.WebAPI.Validation;
 
 namespace OrderService.WebAPI
 {
@@ -32,6 +35,8 @@ namespace OrderService.WebAPI
 
             services.AddScoped<IOrderService, Order.Service.OrderService>();
             services.AddScoped<IOrderRepository, OrderRepository>();
+            services.AddTransient<IValidator<CreateOrderRequest>, CreateOrderRequestValidator>();
+            services.AddTransient<IValidator<UpdateOrderStatusRequest>, UpdateOrderStatusRequestValidator>();
 
             services.AddControllers();
 

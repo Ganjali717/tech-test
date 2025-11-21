@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Order.Model.Requests;
 
 namespace Order.Data.Repositories
 {
@@ -132,5 +133,81 @@ namespace Order.Data.Repositories
 
             await _orderContext.SaveChangesAsync();
         }
+
+        public async Task<OrderDetail> CreateOrderAsync(CreateOrderRequest request)
+        {
+            var createdStatus = await _orderContext.OrderStatus
+                .SingleAsync(s => s.Name == "Created")
+                .ConfigureAwait(false);
+
+            var now = DateTime.UtcNow;
+            var orderId = Guid.NewGuid();
+
+            var orderEntity = new Entities.Order
+            {
+                Id = orderId.ToByteArray(),
+                ResellerId = request.ResellerId.ToByteArray(),
+                CustomerId = request.CustomerId.ToByteArray(),
+                StatusId = createdStatus.Id,
+                Status = createdStatus,
+                CreatedDate = now
+            };
+
+            foreach (var item in request.Items)
+            {
+                var product = await _orderContext.OrderProduct
+                    .SingleAsync(p => p.Id == item.ProductId.ToByteArray())
+                    .ConfigureAwait(false);
+
+                var orderItem = new Entities.OrderItem
+                {
+                    Id = Guid.NewGuid().ToByteArray(),
+                    Order = orderEntity,
+                    OrderId = orderEntity.Id,
+                    Product = product,
+                    ProductId = product.Id,
+                    Service = product.Service,
+                    ServiceId = product.ServiceId,
+                    Quantity = item.Quantity
+                };
+
+                orderEntity.Items.Add(orderItem);
+            }
+
+            _orderContext.Order.Add(orderEntity);
+            await _orderContext.SaveChangesAsync().ConfigureAwait(false);
+            
+            return await GetOrderByIdAsync(orderId).ConfigureAwait(false);
+        }
+
+        public async Task<IEnumerable<MonthlyProfit>> GetMonthlyProfitAsync()
+        {
+            var items = await _orderContext.OrderItem
+                .Include(i => i.Order)
+                .Include(i => i.Product)
+                .Select(i => new
+                {
+                    i.Order.CreatedDate,
+                    Profit = (i.Product.UnitPrice - i.Product.UnitCost) * i.Quantity.Value
+                })
+                .ToListAsync()
+                .ConfigureAwait(false);
+            
+            var result = items
+                .GroupBy(x => new { x.CreatedDate.Year, x.CreatedDate.Month })
+                .Select(g => new MonthlyProfit
+                {
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
+                    TotalProfit = g.Sum(x => x.Profit)
+                })
+                .OrderBy(x => x.Year)
+                .ThenBy(x => x.Month)
+                .ToList();
+
+            return result;
+        }
+
+
     }
 }
