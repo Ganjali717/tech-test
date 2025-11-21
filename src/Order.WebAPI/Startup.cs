@@ -9,6 +9,7 @@ using Order.Data.Context;
 using Order.Data.Repositories;
 using Order.Model.Requests;
 using Order.Service.Interfaces;
+using OrderService.WebAPI.Middleware;
 using OrderService.WebAPI.Validation;
 
 namespace OrderService.WebAPI
@@ -49,16 +50,16 @@ namespace OrderService.WebAPI
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Order API V1");
+                });
             }
 
             app.UseHttpsRedirection();
 
-
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Order API V1");
-            });
+            app.UseMiddleware<ErrorHandlingMiddleware>();
 
             app.UseRouting();
 

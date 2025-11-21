@@ -74,20 +74,9 @@ namespace OrderService.WebAPI.Controllers
 
                 return ValidationProblem(ModelState);
             }
-
-            try
-            {
-                var updated = await _orderService.UpdateOrderStatusAsync(orderId, request.Status);
-                return Ok(updated);
-            }
-            catch (OrderNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (InvalidOrderStatusTransitionException ex)
-            {
-                return Conflict(ex.Message);
-            }
+            
+            var updated = await _orderService.UpdateOrderStatusAsync(orderId, request.Status);
+            return Ok(updated);
         }
 
 
@@ -104,7 +93,7 @@ namespace OrderService.WebAPI.Controllers
                 {
                     ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
                 }
-                
+
                 return ValidationProblem(ModelState);
             }
 
