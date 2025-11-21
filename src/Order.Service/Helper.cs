@@ -24,8 +24,7 @@ public class Helper
 
         if (StatusAliases.TryGetValue(key, out var canonical))
             return canonical;
-
-        // fallback: вдруг прислали уже правильное имя
+        
         return status;
     }
 

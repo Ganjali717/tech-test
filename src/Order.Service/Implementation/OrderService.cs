@@ -17,18 +17,16 @@ namespace Order.Service
         private readonly IOrderRepository _orderRepository;
 
         public OrderService(IOrderRepository orderRepository)
-        {
-            _orderRepository = orderRepository;
-        }
+            => _orderRepository = orderRepository;
 
-        public Task<IEnumerable<OrderSummary>> GetOrdersAsync()
-            => _orderRepository.GetOrdersAsync();
+        public async Task<IEnumerable<OrderSummary>> GetOrdersAsync()
+            => await _orderRepository.GetOrdersAsync();
 
-        public Task<OrderDetail> GetOrderByIdAsync(Guid orderId)
-            => _orderRepository.GetOrderByIdAsync(orderId);
+        public async Task<OrderDetail> GetOrderByIdAsync(Guid orderId)
+            => await _orderRepository.GetOrderByIdAsync(orderId);
 
-        public Task<IEnumerable<OrderSummary>> GetOrdersByStatusAsync(string status)
-            => _orderRepository.GetOrdersByStatusAsync(status);
+        public async Task<IEnumerable<OrderSummary>> GetOrdersByStatusAsync(string status)
+            => await _orderRepository.GetOrdersByStatusAsync(status);
 
         public async Task<OrderDetail> UpdateOrderStatusAsync(Guid orderId, string newStatus)
         {
@@ -46,8 +44,8 @@ namespace Order.Service
         public async Task<OrderDetail> CreateOrderAsync(CreateOrderRequest request)
             => await _orderRepository.CreateOrderAsync(request);
 
-        public Task<IEnumerable<MonthlyProfit>> GetMonthlyProfitAsync()
-            => _orderRepository.GetMonthlyProfitAsync();
+        public async Task<IEnumerable<MonthlyProfit>> GetMonthlyProfitAsync()
+            => await _orderRepository.GetMonthlyProfitAsync();
 
     }
 }

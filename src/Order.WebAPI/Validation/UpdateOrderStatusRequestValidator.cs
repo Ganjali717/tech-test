@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Order.Model.Requests;
 
+namespace OrderService.WebAPI.Validation;
 public class UpdateOrderStatusRequestValidator : AbstractValidator<UpdateOrderStatusRequest>
 {
     public UpdateOrderStatusRequestValidator()

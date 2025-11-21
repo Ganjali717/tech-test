@@ -63,7 +63,7 @@ namespace OrderService.WebAPI.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> UpdateStatus(Guid orderId, [FromBody] UpdateOrderStatusRequest request)
         {
-            var validationResult = _updateStatusValidator.Validate(request);
+            var validationResult = await _updateStatusValidator.ValidateAsync(request);
 
             if (!validationResult.IsValid)
             {
@@ -72,7 +72,7 @@ namespace OrderService.WebAPI.Controllers
                     ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
                 }
 
-                return ValidationProblem(ModelState); // 400 + детали ошибок
+                return ValidationProblem(ModelState);
             }
 
             try
