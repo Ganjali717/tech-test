@@ -4,7 +4,7 @@ using Order.Data.Entities;
 using System;
 using System.Linq;
 
-namespace Order.Data
+namespace Order.Data.Context
 {
     public partial class OrderContext : DbContext
     {
