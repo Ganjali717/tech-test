@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using Order.Data.Context;
 using Order.Data.Entities;
@@ -33,6 +34,7 @@ namespace Order.Service.Tests
                 .EnableDetailedErrors(true)
                 .EnableSensitiveDataLogging(true)
                 .Options;
+            var logger = NullLogger<OrderService>.Instance;
 
             _connection = RelationalOptionsExtension.Extract(options).Connection;
 
@@ -41,7 +43,7 @@ namespace Order.Service.Tests
             _orderContext.Database.EnsureCreated();
 
             _orderRepository = new OrderRepository(_orderContext);
-            _orderService = new OrderService(_orderRepository);
+            _orderService = new OrderService(_orderRepository, logger);
 
             await AddReferenceDataAsync(_orderContext);
         }
