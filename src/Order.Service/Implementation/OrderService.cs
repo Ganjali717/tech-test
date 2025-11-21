@@ -8,7 +8,6 @@ using Order.Service.Interfaces;
 using Order.Service.Status;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Order.Service
@@ -16,26 +15,42 @@ namespace Order.Service
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepository;
+        private readonly IOrderStatusNormalizer _statusNormalizer;
         private readonly ILogger<OrderService> _logger;
 
-        public OrderService(IOrderRepository orderRepository, ILogger<OrderService> logger)
+        public OrderService(
+            IOrderRepository orderRepository,
+            IOrderStatusNormalizer statusNormalizer,
+            ILogger<OrderService> logger)
         {
-            _orderRepository = orderRepository;
-            _logger = logger;
+            _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
+            _statusNormalizer = statusNormalizer ?? throw new ArgumentNullException(nameof(statusNormalizer));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<IEnumerable<OrderSummary>> GetOrdersAsync()
-            => await _orderRepository.GetOrdersAsync();
+        public Task<IEnumerable<OrderSummary>> GetOrdersAsync()
+            => _orderRepository.GetOrdersAsync();
 
         public async Task<OrderDetail> GetOrderByIdAsync(Guid orderId)
-            => await _orderRepository.GetOrderByIdAsync(orderId);
+        {
+            var order = await _orderRepository.GetOrderByIdAsync(orderId);
+            if (order is null)
+            {
+                throw new OrderNotFoundException(orderId);
+            }
 
-        public async Task<IEnumerable<OrderSummary>> GetOrdersByStatusAsync(string status)
-            => await _orderRepository.GetOrdersByStatusAsync(status);
+            return order;
+        }
+
+        public Task<IEnumerable<OrderSummary>> GetOrdersByStatusAsync(string status)
+        {
+            var normalized = _statusNormalizer.Normalize(status);
+            return _orderRepository.GetOrdersByStatusAsync(normalized);
+        }
 
         public async Task<OrderDetail> UpdateOrderStatusAsync(Guid orderId, string newStatus)
         {
-            var targetStatus = Helper.NormalizeStatus(newStatus);
+            var targetStatus = _statusNormalizer.Normalize(newStatus);
 
             var current = await _orderRepository.GetOrderByIdAsync(orderId)
                           ?? throw new OrderNotFoundException(orderId);
@@ -50,7 +65,8 @@ namespace Order.Service
 
             await _orderRepository.UpdateOrderStatusAsync(orderId, targetStatus);
 
-            var updated = await _orderRepository.GetOrderByIdAsync(orderId);
+            var updated = await _orderRepository.GetOrderByIdAsync(orderId)
+                          ?? throw new OrderNotFoundException(orderId);
 
             _logger.LogInformation(
                 "Order {OrderId} status successfully changed to {NewStatus}",
@@ -61,6 +77,8 @@ namespace Order.Service
 
         public async Task<OrderDetail> CreateOrderAsync(CreateOrderRequest request)
         {
+            if (request is null) throw new ArgumentNullException(nameof(request));
+
             _logger.LogInformation(
                 "Creating order for Reseller {ResellerId}, Customer {CustomerId} with {ItemCount} items",
                 request.ResellerId, request.CustomerId, request.Items.Count);
@@ -74,11 +92,10 @@ namespace Order.Service
             return created;
         }
 
-        public async Task<IEnumerable<MonthlyProfit>> GetMonthlyProfitAsync()
+        public Task<IEnumerable<MonthlyProfit>> GetMonthlyProfitAsync()
         {
             _logger.LogInformation("Calculating monthly profit for orders");
-            return await _orderRepository.GetMonthlyProfitAsync();
+            return _orderRepository.GetMonthlyProfitAsync();
         }
-
     }
 }

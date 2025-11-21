@@ -9,6 +9,7 @@ using Order.Data.Context;
 using Order.Data.Repositories;
 using Order.Model.Requests;
 using Order.Service.Interfaces;
+using Order.Service.Status;
 using OrderService.WebAPI.Middleware;
 using OrderService.WebAPI.Validation;
 
@@ -34,8 +35,10 @@ namespace OrderService.WebAPI
                 .UseMySQL(serviceOptions);
             });
 
-            services.AddScoped<IOrderService, Order.Service.OrderService>();
             services.AddScoped<IOrderRepository, OrderRepository>();
+            services.AddScoped<IOrderService, Order.Service.OrderService>();
+            services.AddSingleton<IOrderStatusNormalizer, OrderStatusNormalizer>();
+
             services.AddTransient<IValidator<CreateOrderRequest>, CreateOrderRequestValidator>();
             services.AddTransient<IValidator<UpdateOrderStatusRequest>, UpdateOrderStatusRequestValidator>();
 

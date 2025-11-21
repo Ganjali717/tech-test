@@ -22,6 +22,7 @@ namespace Order.Data.Repositories
         public async Task<IEnumerable<OrderSummary>> GetOrdersAsync()
         {
             var orders = await _orderContext.Order
+                .AsNoTracking()
                 .Include(x => x.Items)
                 .Include(x => x.Status)
                 .Select(x => new OrderSummary

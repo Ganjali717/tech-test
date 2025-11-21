@@ -1,14 +1,12 @@
-﻿using FluentValidation;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Order.Model.DTOs;
 using Order.Model.Requests;
-using Order.Service.Exceptions;
 using Order.Service.Interfaces;
-using OrderService.WebAPI.Validation;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace OrderService.WebAPI.Controllers
 {
@@ -25,46 +23,40 @@ namespace OrderService.WebAPI.Controllers
             IValidator<CreateOrderRequest> createOrderValidator,
             IValidator<UpdateOrderStatusRequest> updateStatusValidator)
         {
-            _orderService = orderService;
-            _createOrderValidator = createOrderValidator;
-            _updateStatusValidator = updateStatusValidator;
+            _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
+            _createOrderValidator = createOrderValidator ?? throw new ArgumentNullException(nameof(createOrderValidator));
+            _updateStatusValidator = updateStatusValidator ?? throw new ArgumentNullException(nameof(updateStatusValidator));
         }
-
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> Get([FromQuery] string? status)
+        public async Task<ActionResult<IEnumerable<OrderSummary>>> GetOrders([FromQuery] string? status)
         {
-            IEnumerable<OrderSummary> orders;
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var filtered = await _orderService.GetOrdersByStatusAsync(status);
+                return Ok(filtered);
+            }
 
-            if (string.IsNullOrWhiteSpace(status))
-                orders = await _orderService.GetOrdersAsync();
-            else
-                orders = await _orderService.GetOrdersByStatusAsync(status);
-
+            var orders = await _orderService.GetOrdersAsync();
             return Ok(orders);
         }
 
-
-        [HttpGet("{orderId}")]
+        [HttpGet("{orderId:guid}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetOrderById(Guid orderId)
+        public async Task<ActionResult<OrderDetail>> GetOrderById(Guid orderId)
         {
             var order = await _orderService.GetOrderByIdAsync(orderId);
-            return order is null ? NotFound() : Ok(order);
+            return Ok(order);
         }
-
 
         [HttpPut("{orderId:guid}/status")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> UpdateStatus(Guid orderId, [FromBody] UpdateOrderStatusRequest request)
+        public async Task<ActionResult<OrderDetail>> UpdateOrderStatus(
+            Guid orderId,
+            [FromBody] UpdateOrderStatusRequest request)
         {
             var validationResult = await _updateStatusValidator.ValidateAsync(request);
-
             if (!validationResult.IsValid)
             {
                 foreach (var error in validationResult.Errors)
@@ -74,19 +66,16 @@ namespace OrderService.WebAPI.Controllers
 
                 return ValidationProblem(ModelState);
             }
-            
+
             var updated = await _orderService.UpdateOrderStatusAsync(orderId, request.Status);
             return Ok(updated);
         }
 
-
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Create([FromBody] CreateOrderRequest request)
+        public async Task<ActionResult<OrderDetail>> CreateOrder([FromBody] CreateOrderRequest request)
         {
             var validationResult = await _createOrderValidator.ValidateAsync(request);
-
             if (!validationResult.IsValid)
             {
                 foreach (var error in validationResult.Errors)
@@ -100,7 +89,6 @@ namespace OrderService.WebAPI.Controllers
             var created = await _orderService.CreateOrderAsync(request);
             return CreatedAtAction(nameof(GetOrderById), new { orderId = created.Id }, created);
         }
-
 
         [HttpGet("profit-by-month")]
         [ProducesResponseType(StatusCodes.Status200OK)]

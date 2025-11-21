@@ -7,6 +7,7 @@ using Order.Data.Context;
 using Order.Data.Entities;
 using Order.Data.Repositories;
 using Order.Service.Interfaces;
+using Order.Service.Status;
 using System;
 using System.Data.Common;
 using System.Linq;
@@ -34,7 +35,9 @@ namespace Order.Service.Tests
                 .EnableDetailedErrors(true)
                 .EnableSensitiveDataLogging(true)
                 .Options;
+
             var logger = NullLogger<OrderService>.Instance;
+            var normalizer = new OrderStatusNormalizer();
 
             _connection = RelationalOptionsExtension.Extract(options).Connection;
 
@@ -43,7 +46,7 @@ namespace Order.Service.Tests
             _orderContext.Database.EnsureCreated();
 
             _orderRepository = new OrderRepository(_orderContext);
-            _orderService = new OrderService(_orderRepository, logger);
+            _orderService = new OrderService(_orderRepository, normalizer, logger); 
 
             await AddReferenceDataAsync(_orderContext);
         }
