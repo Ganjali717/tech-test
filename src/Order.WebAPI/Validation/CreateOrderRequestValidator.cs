@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using System.Linq;
+using FluentValidation;
 using Order.Model.Requests;
 
 namespace OrderService.WebAPI.Validation;
@@ -7,6 +8,15 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
 {
     public CreateOrderRequestValidator()
     {
+        RuleFor(x => x.Items)
+            .Must(items =>
+            {
+                return items
+                    .GroupBy(i => new { i.ProductId })
+                    .All(g => g.Count() == 1);
+            })
+            .WithMessage("Each productId must appear only once in items.");
+
         RuleFor(x => x.ResellerId)
             .NotEmpty().WithMessage("ResellerId is required.");
 
