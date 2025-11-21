@@ -1,5 +1,8 @@
-﻿using Order.Data.Repositories;
+﻿using Microsoft.Extensions.Logging;
+using Order.Data.Repositories;
+using Order.Model;
 using Order.Model.DTOs;
+using Order.Model.Requests;
 using Order.Service.Exceptions;
 using Order.Service.Interfaces;
 using Order.Service.Status;
@@ -7,17 +10,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Order.Model;
-using Order.Model.Requests;
 
 namespace Order.Service
 {
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepository;
+        private readonly ILogger<OrderService> _logger;
 
-        public OrderService(IOrderRepository orderRepository)
-            => _orderRepository = orderRepository;
+        public OrderService(IOrderRepository orderRepository, ILogger<OrderService> logger)
+        {
+            _orderRepository = orderRepository;
+            _logger = logger;
+        }
 
         public async Task<IEnumerable<OrderSummary>> GetOrdersAsync()
             => await _orderRepository.GetOrdersAsync();
@@ -30,22 +35,50 @@ namespace Order.Service
 
         public async Task<OrderDetail> UpdateOrderStatusAsync(Guid orderId, string newStatus)
         {
+            var targetStatus = Helper.NormalizeStatus(newStatus);
+
             var current = await _orderRepository.GetOrderByIdAsync(orderId)
                           ?? throw new OrderNotFoundException(orderId);
 
             var currentStatus = current.StatusName;
-            var targetStatus = Helper.NormalizeStatus(newStatus);
+
+            _logger.LogInformation(
+                "Attempting to change order {OrderId} status {OldStatus} -> {NewStatus}",
+                orderId, currentStatus, targetStatus);
+
             OrderStatusTransitions.Validate(currentStatus, targetStatus);
 
             await _orderRepository.UpdateOrderStatusAsync(orderId, targetStatus);
-            return await _orderRepository.GetOrderByIdAsync(orderId);
+
+            var updated = await _orderRepository.GetOrderByIdAsync(orderId);
+
+            _logger.LogInformation(
+                "Order {OrderId} status successfully changed to {NewStatus}",
+                orderId, targetStatus);
+
+            return updated;
         }
 
         public async Task<OrderDetail> CreateOrderAsync(CreateOrderRequest request)
-            => await _orderRepository.CreateOrderAsync(request);
+        {
+            _logger.LogInformation(
+                "Creating order for Reseller {ResellerId}, Customer {CustomerId} with {ItemCount} items",
+                request.ResellerId, request.CustomerId, request.Items.Count);
+
+            var created = await _orderRepository.CreateOrderAsync(request);
+
+            _logger.LogInformation(
+                "Order {OrderId} created with status {Status}",
+                created.Id, created.StatusName);
+
+            return created;
+        }
 
         public async Task<IEnumerable<MonthlyProfit>> GetMonthlyProfitAsync()
-            => await _orderRepository.GetMonthlyProfitAsync();
+        {
+            _logger.LogInformation("Calculating monthly profit for orders");
+            return await _orderRepository.GetMonthlyProfitAsync();
+        }
 
     }
 }
