@@ -290,5 +290,10 @@ This implementation:
 - Is fully testable and structured for maintainability  
 
 
+## Notes
+
+This README was created with assistance from an AI tool and then reviewed and adjusted manually.
+
 Ganjali Imanov © 2025 
+
 
