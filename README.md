@@ -134,7 +134,7 @@ Returns a list of monthly profit aggregates, e.g.:
 
 ---
 
-## 🧠 Status Management (Lead-Level Design)
+## 🧠 Status Management
 
 ### Centralized Status Definitions
 
@@ -291,3 +291,4 @@ This implementation:
 
 
 Ganjali Imanov © 2025 
+
