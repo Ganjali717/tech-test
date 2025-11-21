@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Order.Data.Context;
 using Order.Model;
+using Order.Model.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -107,6 +108,29 @@ namespace Order.Data.Repositories
                 .ConfigureAwait(false);
 
             return orders;
+        }
+
+        public async Task UpdateOrderStatusAsync(Guid orderId, string newStatus)
+        {
+            var orderBytes = orderId.ToByteArray();
+
+            var order = await _orderContext.Order
+                .Include(o => o.Status)
+                .SingleOrDefaultAsync(o => o.Id == orderBytes);
+
+            if (order == null)
+                return;
+
+            var status = await _orderContext.OrderStatus
+                .SingleOrDefaultAsync(s => s.Name == newStatus);
+
+            if (status == null)
+                throw new InvalidOperationException($"Unknown status '{newStatus}'.");
+
+            order.StatusId = status.Id;
+            order.Status = status;
+
+            await _orderContext.SaveChangesAsync();
         }
     }
 }
