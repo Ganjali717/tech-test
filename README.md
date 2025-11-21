@@ -1,56 +1,293 @@
-# Giacom Tech Test
+# 🚀 Order Service — Technical Test (Lead-Level Implementation)
 
-## Background
-Giacom Cloud Market is a B2B e-commerce platform which allows IT companies (resellers) to buy services indirectly from major vendors (Microsoft, Symantec, Webroot etc) in high volumes at low cost. IT companies then resell the purchased services on to their customers, making a small margin. Behind Cloud Market are several microservices, one of which is an Order API much like the one we are going to work on for this test.
+## 📌 Overview
 
-## Concepts
-* Reseller = A customer of Giacom
-* Customer = A customer of a Reseller
-* Order = An order placed by a Reseller for a specific Customer
-* Order Item = A service and product which belongs to an Order
-* Order Status = The current state of an Order
-* Product = An end-offering which can be purchased e.g. '100GB Mailbox'
-* Service = The category the Product belongs to e.g. 'Email'
-* Profit = The difference between Cost and Price
+This project is an end-to-end implementation of an **Order Management Service**.
 
-## Time
-You should allocate approx. 2 hours to complete the tech test though it will likely take less time for more experienced engineers.
+The system provides:
 
-## Pre-Reqs
-* Visual Studio 2022 (or compatible IDE for working with .net)
-* .NET 8.0 SDK
-* Git
-* Docker (running Linux containers)
-* Optional: MySQL Workbench / Heidi (database client)
-* Optional: Postman (can also use any other API client)
+- Creating orders  
+- Retrieving all orders  
+- Filtering orders by status  
+- Retrieving order details  
+- Updating order status with strict transition rules  
+- Calculating monthly profit  
+- Full validation, logging, status normalization, and structured error handling  
 
-## Setup
-1. Clone this repository locally
-2. Using a terminal, cd to the local repository and run 'docker-compose up db', which will start and seed the database
-3. Open the solution file in /src
-4. Start debugging or run the Order.WebAPI project then query http://localhost:8000/orders in your API client / browser to test that setup is complete. You should see orders being returned from the API
-   
-## Tasks
-Add a new API endpoint for each of the following tasks:
-1. Return Orders with a specified Order Status e.g. 'Failed'
-2. Allow an Order Status to be updated to a different status e.g. 'InProgress'
-3. Allow an Order to be created. This should include validation of any parameters
-4. Calculate profit by month for all 'completed' Orders
+---
 
-Finally, once code-complete, close your IDE, run 'docker-compose down --volumes' to stop and remove the database container. Now run 'docker-compose up'. This will run the local database and also build the microservice in Release mode. Test the API is working correctly via this method (as this is the one Giacom will run to test the submission).
+## 🏗 Architecture
 
-## Submission
-Please push your code to a new github repository then send the repository link to the email address from which the tech test was issued. If applicable, add notes in the email explaining why you have chosen a particular approach.
-Alternatively, zip or git-bundle the repository and email it.
+The solution is split into clear layers:
 
-## Help
-If you happen to run into any issues when running the Docker container, try deselecting Hyper-V Services in "Windows Features" (Search for Windows Features in Start Menu), selecting again, and then restarting your computer.
+```text
+Order.WebAPI         → REST API, routing, middleware, controllers
+Order.Service        → business logic, domain rules, status handling
+Order.Data           → EF Core DbContext, entities, repositories
+Order.Model          → DTOs, request models
+Order.Service.Tests  → unit tests
+```
 
-To connect to the MySQL database directly the credentials are as follows:
-* Hostname: *localhost*
-* Username: *order-service*
-* Password: *nmCsdkhj20n@Sa*
+### Design principles
 
-If you experience further issues getting set up with the tech test please reply to the email address from which the tech test was issued with your query.
+- Separation of concerns between Web/API, business logic, and data access
+- Dependency Injection for all services and repositories
+- Domain-level exceptions for domain errors
+- FluentValidation for request validation
+- Centralized status normalization and transition rules
+- Consistent, typed API responses
+- Repositories using `AsNoTracking()` for read-only queries
+- Unit tests running against a real EF Core pipeline (SQLite In-Memory)
 
-Copyright (c) 2025, Giacom.
+---
+
+## 📦 Features
+
+### 1. Order Creation
+
+Create a new order with one or more items.
+
+- Validates:
+  - reseller/customer IDs
+  - non-empty item list
+  - positive quantities
+- Returns full order details (including totals and status).
+
+### 2. Get All Orders
+
+Retrieve all existing orders:
+
+```http
+GET /orders
+```
+
+Supports filtering by status:
+
+```http
+GET /orders?status=in_progress
+```
+
+The status is normalized via a dedicated status normalizer, so inputs like:
+
+- `in_progress`
+- `In Progress`
+- `INPROGRESS`
+- `in progress`
+
+are all mapped to the canonical `"In Progress"` status.
+
+### 3. Get Order by ID
+
+```http
+GET /orders/{orderId}
+```
+
+Returns:
+
+- order header information
+- status
+- items
+- total cost and total price
+
+### 4. Update Order Status
+
+```http
+PUT /orders/{orderId}/status
+```
+
+Request body:
+
+```json
+{
+  "status": "In Progress"
+}
+```
+
+Status transitions are validated by a centralized rule set:
+
+| Current Status | Allowed Next Statuses     |
+|----------------|---------------------------|
+| Created        | In Progress, Failed       |
+| In Progress    | Completed, Failed         |
+| Failed         | In Progress               |
+| Completed      | (no further transitions)  |
+
+Invalid transitions throw a domain exception and result in a structured 409 Conflict response.
+
+### 5. Monthly Profit
+
+```http
+GET /orders/profit-by-month
+```
+
+Returns a list of monthly profit aggregates, e.g.:
+
+```json
+[
+  {
+    "year": 2024,
+    "month": 2,
+    "profit": 123.45
+  }
+]
+```
+
+---
+
+## 🧠 Status Management (Lead-Level Design)
+
+### Centralized Status Definitions
+
+`OrderStatuses` defines the canonical statuses in a single place, ensuring no magic strings are spread across the codebase.
+
+### Status Normalizer
+
+`OrderStatusNormalizer` is responsible for:
+
+- mapping aliases / different formats to canonical values
+- throwing clear errors for unknown statuses
+
+This keeps input handling robust and predictable.
+
+### Status Transition Rules
+
+`OrderStatusTransitions` encapsulates the valid transitions and throws `InvalidOrderStatusTransitionException` when the rules are violated.
+
+This makes the domain rules explicit, testable, and easy to extend.
+
+---
+
+## ⚙️ Error Handling
+
+A custom `ErrorHandlingMiddleware` converts exceptions into **RFC 7807**-style `application/problem+json` responses.
+
+Example mappings:
+
+- `OrderNotFoundException` → HTTP 404 + problem JSON  
+- `InvalidOrderStatusTransitionException` → HTTP 409 + problem JSON  
+- `ArgumentException` (invalid input) → HTTP 400  
+- Any other unhandled exception → HTTP 500 with generic message  
+
+This gives clients a consistent, machine-readable error contract.
+
+---
+
+## ✅ Validation
+
+Validation is implemented using **FluentValidation** for request models such as:
+
+- `CreateOrderRequest`
+- `UpdateOrderStatusRequest`
+
+Typical rules include:
+
+- required IDs
+- non-empty items collection
+- positive quantities
+
+Invalid requests result in a standard validation response with detailed error messages.
+
+---
+
+## 🧪 Testing
+
+Unit tests are implemented in the `Order.Service.Tests` project.
+
+Characteristics:
+
+- EF Core with SQLite In-Memory is used for realistic behavior  
+- Real `OrderContext` and `OrderRepository` are used  
+- Tests cover:
+  - retrieving orders
+  - totals (cost/price) calculations
+  - retrieving by ID
+  - item counts
+  - reference data (statuses, products, services)
+
+Run tests with:
+
+```bash
+dotnet test
+```
+
+---
+
+## 🛠 Technologies
+
+- .NET (ASP.NET Core Web API)
+- Entity Framework Core
+- SQLite In-Memory for tests
+- FluentValidation
+- NUnit
+- Dependency Injection
+- Structured logging
+- ProblemDetails (application/problem+json)
+
+---
+
+## 📁 Project Structure
+
+```text
+src/
+  Order.WebAPI/
+    Controllers/
+    Middleware/
+
+  Order.Service/
+    Interfaces/
+    Implementation/
+    Exceptions/
+    Status/          # status constants, normalizer, transitions
+
+  Order.Data/
+    Context/
+    Entities/
+    Repositories/
+
+  Order.Model/
+    DTOs/
+    Requests/
+
+tests/
+  Order.Service.Tests/
+```
+
+---
+
+## ▶️ Running the Application
+
+1. Restore and build:
+
+```bash
+dotnet restore
+dotnet build
+```
+
+2. Run the API (from the WebAPI project):
+
+```bash
+dotnet run
+```
+
+3. The API will typically be available at:
+
+```text
+https://localhost:{port}/orders
+```
+
+You can then use Postman, curl, or a browser (for GET endpoints) to interact with the service.
+
+---
+
+## 🏁 Conclusion
+
+This implementation:
+
+- Covers the full flow from data to API  
+- Encapsulates business rules in the domain layer  
+- Uses proper validation and error handling  
+- Implements realistic status management with normalization and transitions  
+- Is fully testable and structured for maintainability  
+
+
+Ganjali Imanov © 2025 
