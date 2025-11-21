@@ -15,16 +15,13 @@ namespace Order.Service
             _orderRepository = orderRepository;
         }
 
-        public async Task<IEnumerable<OrderSummary>> GetOrdersAsync()
-        {
-            var orders = await _orderRepository.GetOrdersAsync();
-            return orders;
-        }
+        public Task<IEnumerable<OrderSummary>> GetOrdersAsync()
+            => _orderRepository.GetOrdersAsync();
 
-        public async Task<OrderDetail> GetOrderByIdAsync(Guid orderId)
-        {
-            var order = await _orderRepository.GetOrderByIdAsync(orderId);
-            return order;
-        }
+        public Task<OrderDetail> GetOrderByIdAsync(Guid orderId)
+            => _orderRepository.GetOrderByIdAsync(orderId);
+
+        public Task<IEnumerable<OrderSummary>> GetOrdersByStatusAsync(string status)
+            => _orderRepository.GetOrdersByStatusAsync(status);
     }
 }

@@ -73,5 +73,39 @@ namespace Order.Data
             
             return order;
         }
+
+        public async Task<IEnumerable<OrderSummary>> GetOrdersByStatusAsync(string statusName)
+        {
+            statusName = statusName?.Trim();
+
+            var query = _orderContext.Order
+                .Include(o => o.Status)
+                .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(statusName))
+            {
+                query = query.Where(o => o.Status.Name == statusName);
+            }
+
+            var orders = await query
+                .Select(o => new OrderSummary
+                {
+                    Id = new Guid(o.Id),
+                    ResellerId = new Guid(o.ResellerId),
+                    CustomerId = new Guid(o.CustomerId),
+                    StatusId = new Guid(o.StatusId),
+                    StatusName = o.Status.Name,
+                    ItemCount = o.Items.Count,
+                    TotalCost = o.Items.Sum(i => i.Product.UnitCost * i.Quantity.Value),
+                    TotalPrice = o.Items.Sum(i => i.Product.UnitPrice * i.Quantity.Value),
+                    CreatedDate = o.CreatedDate
+                })
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            return orders;
+        }
     }
 }
