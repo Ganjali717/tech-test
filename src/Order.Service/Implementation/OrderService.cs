@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Order.Service.Implementation
+namespace Order.Service
 {
     public class OrderService : IOrderService
     {

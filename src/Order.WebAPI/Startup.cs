@@ -30,7 +30,7 @@ namespace OrderService.WebAPI
                 .UseMySQL(serviceOptions);
             });
 
-            services.AddScoped<IOrderService, Order.Service.Implementation.OrderService>();
+            services.AddScoped<IOrderService, Order.Service.OrderService>();
             services.AddScoped<IOrderRepository, OrderRepository>();
 
             services.AddControllers();
